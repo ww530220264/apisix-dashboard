@@ -17,6 +17,8 @@
 package authentication
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"reflect"
 	"time"
 
@@ -88,9 +90,19 @@ func (h *Handler) userLogin(c droplet.Context) (interface{}, error) {
 	password := input.Password
 
 	user := conf.UserList[username]
-	if username != user.Username || password != user.Password {
+	
+	has := md5.New()            // 创建md5算法
+	has.Write([]byte(password)) // 写入需要加密的数据
+	b := has.Sum(nil)           // 获取hash值字符切片；Sum函数接受一个字符切片，这个切片的内容会原样的追加到abc123加密后的hash值的前面，这里我们不需要这么做，所以传入nil
+	// 上面可以看到加密后的数据为长度为16位的字符切片，一般我们会把它转为16进制，方便存储和传播，下一步转换16进制
+
+	if username != user.Username || hex.EncodeToString(b) != user.Password {
 		return nil, consts.ErrUsernamePassword
 	}
+	
+	//if username != user.Username || password != user.Password {
+	//	return nil, consts.ErrUsernamePassword
+	//}
 
 	// create JWT for session
 	claims := jwt.StandardClaims{
